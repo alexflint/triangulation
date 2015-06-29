@@ -45,9 +45,14 @@ def test_triangulate_linear():
             yield check_triangulation, triangulate_linear, num_frames, noise, decimals
 
 
-def test_triangulate_directional_pair():
+def test_triangulate_directional_relative_pair():
     poses = [SE3.identity(), SE3.from_tangent(np.random.randn(6)*.1)]
     point = np.random.randn(3) + [0, 0, 10]
     features = [pr(np.dot(pose.orientation, point - pose.position)) for pose in poses]
     estimated = triangulate_directional_relative_pair(features[0], features[1], poses[1])
+    assert_arrays_almost_equal(estimated, point)
+
+def test_triangulate_directional_pair():
+    features, poses, point = generate_features(num_frames=2)
+    estimated = triangulate_directional_pair(features[0], features[1], poses[0], poses[1])
     assert_arrays_almost_equal(estimated, point)

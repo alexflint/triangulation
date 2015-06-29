@@ -44,6 +44,9 @@ def triangulate_linear(features, poses):
 
 
 def triangulate_directional_relative_pair(z0, z1, relative_pose):
+    """
+    Triangulate a landmark from a relative pose between two cameras.
+    """
     r, t = relative_pose.inverse().rt
     y0 = normalized(unpr(z0))
     y1 = normalized(unpr(z1))
@@ -79,3 +82,11 @@ def triangulate_directional_relative_pair(z0, z1, relative_pose):
         ])
 
     return np.linalg.solve(lhs, rhs) * tlen
+
+
+def triangulate_directional_pair(feature1, feature2, pose1, pose2):
+    """
+    Triangulate a landmark from two observations by minimizing the directional error.
+    """
+    xrel = triangulate_directional_relative_pair(feature1, feature2, pose2 * pose1.inverse())
+    return pose0.inverse().transform(xrel)
