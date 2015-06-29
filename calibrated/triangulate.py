@@ -89,4 +89,4 @@ def triangulate_directional_pair(feature1, feature2, pose1, pose2):
     Triangulate a landmark from two observations by minimizing the directional error.
     """
     xrel = triangulate_directional_relative_pair(feature1, feature2, pose2 * pose1.inverse())
-    return pose0.inverse().transform(xrel)
+    return pose1.inverse().transform(xrel)

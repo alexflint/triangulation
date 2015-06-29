@@ -5,7 +5,7 @@ import numpy as np
 
 from rigidbody import pr, rotation, SE3, assert_arrays_almost_equal
 
-from .triangulate import triangulate_midpoint, triangulate_linear, triangulate_directional_relative_pair
+from .triangulate import *
 
 
 def generate_features(num_frames, noise=0):
