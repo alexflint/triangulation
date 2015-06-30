@@ -1,5 +1,5 @@
 import numpy as np
-from rigidbody import normalized, unpr, dots
+from rigidbody import normalized, unpr, dots, sumsq
 
 
 def householder(x):
@@ -53,27 +53,28 @@ def triangulate_directional_relative_pair(z0, z1, relative_pose):
 
     tlen = np.linalg.norm(t)
     tdir = normalized(t)
+    tperp = normalized(np.cross(tdir, y0))
+    if np.linalg.norm(tperp) < 1e-8:
+        raise Exception("observation is in direction of epipole")
 
     lhs = np.array([
         y0 - tdir * np.dot(tdir, y0),
-        normalized(np.cross(tdir, y0)),
+        tperp,
         tdir
         ])
 
     a = np.dot(lhs, y0)
     b = np.dot(lhs, np.dot(r, y1))
-
     bhead = b[0] * b[0] + b[1] * b[1]
 
     c = a[0] * a[0] - bhead
     d = np.sqrt(c * c + 4 * a[0] * a[0] * b[0] * b[0])
-
     e = 2 * b[0] * b[2] * a[0] + a[2] * (a[0] * a[0] - bhead - d)
 
-    if abs(b[1]) > 1e-8:
-        f = (a[0] * a[0] - bhead - d) * b[1] / (e * b[1])
-    else:
+    if abs(b[1]) < 1e-8:
         f = -b[0] / (a[0] * b[2] - a[2] * b[0])
+    else:
+        f = (a[0] * a[0] - bhead - d) * b[1] / (e * b[1])
 
     rhs = np.array([
         f * (a[0] / (2. * d) * (a[0] * a[0] + b[0] * b[0] - b[1] * b[1] + d)),
@@ -90,3 +91,65 @@ def triangulate_directional_pair(feature1, feature2, pose1, pose2):
     """
     xrel = triangulate_directional_relative_pair(feature1, feature2, pose2 * pose1.inverse())
     return pose1.inverse().transform(xrel)
+
+
+def triangulate_directional(features, poses, base_index=0):
+    """
+    Triangulate a landmark by finding the pose that is furthest from base_index and minimizing the
+    directional error using only those two views.
+    """
+    ps = np.array([pose.position for pose in poses])
+    other_index = np.argmax(sumsq(ps - ps[base_index], axis=1))
+    return triangulate_directional_pair(features[base_index], features[other_index], poses[base_index], poses[other_index])
+
+
+def make_triangulation_problem(features, poses, max_error):
+    from ..socp import ConeProblem
+    problem = ConeProblem(np.array([0., 0., 1.]))
+    for z, pose in zip(features, poses):
+        r, p = pose.rp
+        problem.add_constraint(
+            a=r[:2] - np.outer(z, r[2]),
+            b=np.dot(np.outer(z, r[2]) - r[:2], p),
+            c=max_error*pose.orientation[2],
+            d=-max_error*np.dot(pose.orientation[2], pose.position))
+    return problem
+
+
+def triangulate_infnorm_fixed(features, poses, max_error):
+    """
+    Find a landmark that projects with no greater than MAX_ERROR reprojection error into
+    any view if one exists, or return None if no such landmark exists.
+    """
+    from ..socp import solve
+    problem = make_triangulation_problem(features, poses, max_error)
+    solution = solve(problem)
+    if solution['x'] is None:
+        return None
+    else:
+        return np.squeeze(solution['x'])
+
+
+def triangulate_infnorm(features, poses, begin_radius=.01, min_radius=0., max_radius=1., abstol=1e-12, reltol=1e-5):
+    """
+    Triangulate a landmark by minimizing the maximum reprojection error in any view.
+    """
+    lower, upper, radius = 0., None, .01
+    best = None
+    while radius <= max_radius and (upper is None or (upper-lower > abstol and upper > lower*(1.+reltol))):
+        x = triangulate_infnorm_fixed(features, poses, radius)
+        if x is None:
+            lower = radius
+            if upper is None:
+                raius *= 5.
+            else:
+                radius = (lower + upper) / 2.
+        else:
+            best = x
+            upper = radius  # TODO: set upper to the error achieved by x
+            radius = (lower + upper) / 2.
+
+    if best is None:
+        raise Exception('there was no feasible solution with error <= %f' % max_radius)
+
+    return best

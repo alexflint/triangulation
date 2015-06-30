@@ -40,8 +40,7 @@ def test_triangulate_midpoint():
 def test_triangulate_linear():
     np.random.seed(0)
     for num_frames in [2, 3, 10]:
-        print("Num frames=%d" % num_frames)
-        for noise, decimals in [(0, 12)]:  #, (1e-8, 6), (1e-3, 2)]:
+        for noise, decimals in [(0, 12), (1e-8, 6), (1e-3, 2)]:
             yield check_triangulation, triangulate_linear, num_frames, noise, decimals
 
 
@@ -52,7 +51,21 @@ def test_triangulate_directional_relative_pair():
     estimated = triangulate_directional_relative_pair(features[0], features[1], poses[1])
     assert_arrays_almost_equal(estimated, point)
 
+
 def test_triangulate_directional_pair():
     features, poses, point = generate_features(num_frames=2)
     estimated = triangulate_directional_pair(features[0], features[1], poses[0], poses[1])
     assert_arrays_almost_equal(estimated, point)
+
+
+def test_triangulate_infnorm_fixed():
+    features, poses, point = generate_features(num_frames=5)
+    estimated = triangulate_infnorm_fixed(features, poses, 1e-8)
+    assert_arrays_almost_equal(estimated, point)
+
+
+def test_triangulate_infnorm():
+    np.random.seed(0)
+    for num_frames in [2, 3, 10]:
+        for noise, decimals in [(0, 8), (1e-8, 6), (1e-3, 2)]:
+            yield check_triangulation, triangulate_infnorm, num_frames, noise, decimals
