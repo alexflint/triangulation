@@ -104,6 +104,9 @@ def triangulate_directional(features, poses, base_index=0):
 
 
 def make_triangulation_problem(features, poses, max_error):
+    """
+    Construct a second order cone program for infinity-norm triangulation from the given features.
+    """
     from ..socp import ConeProblem
     problem = ConeProblem(np.array([0., 0., 1.]))
     for z, pose in zip(features, poses):
@@ -111,8 +114,8 @@ def make_triangulation_problem(features, poses, max_error):
         problem.add_constraint(
             a=r[:2] - np.outer(z, r[2]),
             b=np.dot(np.outer(z, r[2]) - r[:2], p),
-            c=max_error*pose.orientation[2],
-            d=-max_error*np.dot(pose.orientation[2], pose.position))
+            c=max_error*r[2],
+            d=-max_error*np.dot(r[2], p))
     return problem
 
 
@@ -134,8 +137,8 @@ def triangulate_infnorm(features, poses, begin_radius=.01, min_radius=0., max_ra
     """
     Triangulate a landmark by minimizing the maximum reprojection error in any view.
     """
-    lower, upper, radius = 0., None, .01
     best = None
+    lower, upper, radius = 0., None, .01
     while radius <= max_radius and (upper is None or (upper-lower > abstol and upper > lower*(1.+reltol))):
         x = triangulate_infnorm_fixed(features, poses, radius)
         if x is None:
