@@ -5,14 +5,13 @@ import sys
 import argparse
 
 import triangulation
-import triangulation.calibrated
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('dataset', type=str)
     parser.add_argument('output', type=str)
     parser.add_argument('--format', choices=['vgg', 'matlab'], required=True)
-    parser.add_argument('--algorithm', choices=triangulation.calibrated.algorithms.keys(), required=True)
+    parser.add_argument('--algorithm', choices=triangulation.algorithms.keys(), required=True)
     parser.add_argument('-v', '--verbose', action='store_true', default=False)
     parser.add_argument('-q', '--quiet', action='store_true', default=False)
     args = parser.parse_args()
@@ -40,7 +39,7 @@ def main():
                     print("Track %d has only %d observations" % (i, len(poses)))
 
             try:
-                landmark = triangulation.calibrated.triangulate(observations, poses, algorithm=args.algorithm)
+                landmark = triangulation.triangulate(observations, poses, algorithm=args.algorithm)
                 f.write("%d %s\n" % (i, ' '.join(['%.12f' % xi for xi in landmark])))
                 num_successful += 1
             except Exception as ex:

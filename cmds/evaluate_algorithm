@@ -9,7 +9,6 @@ import rigidbody
 from rigidbody import rotation
 
 import triangulation
-import triangulation.calibrated
 
 import matplotlib.pyplot as plt
 import seaborn
@@ -57,7 +56,7 @@ def main():
     parser.add_argument('--num_points', type=int, default=1000)
     parser.add_argument('--num_frames', type=int, default=10)
     parser.add_argument('--noise', type=float, default=0.)
-    parser.add_argument('--algorithms', choices=triangulation.calibrated.algorithms.keys(), nargs='+')
+    parser.add_argument('--algorithms', choices=triangulation.algorithms.keys(), nargs='+')
     parser.add_argument('--output', type=str, default='out.pdf')
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('-v', '--verbose', action='store_true', default=False)
@@ -88,7 +87,7 @@ def main():
                 features.append(observation.feature)
 
             assert len(poses) >= 2
-            reconstruction.append(triangulation.calibrated.triangulate(features, poses, algorithm=algorithm))
+            reconstruction.append(triangulation.triangulate(features, poses, algorithm=algorithm))
         reconstructions.append(np.array(reconstruction))
 
     plt.clf()
