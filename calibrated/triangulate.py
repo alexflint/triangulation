@@ -156,3 +156,24 @@ def triangulate_infnorm(features, poses, begin_radius=.01, min_radius=0., max_ra
         raise Exception('there was no feasible solution with error <= %f' % max_radius)
 
     return best
+
+
+"""
+Dictionary mapping algorithm names to triangulation functions
+"""
+algorithms = {
+    "linear": triangulate_linear,
+    "midpoint": triangulate_midpoint,
+    "directional": triangulate_directional,
+    "infnorm": triangulate_infnorm,
+}
+
+
+def triangulate(features, poses, algorithm, **kwargs):
+    """
+    Triangulate a landmark. Features should be a list of 2D points representing observations
+    of the landmark in N views. Poses should be a list of 3x4 matrices or rigidbody.SE3 objects
+    representing the pose of the corresponding cameras. Algorithm must be one of: "linear",
+    "midpoint", "directional", "infnorm".
+    """
+    return algorithms[algorithm](features, poses, **kwargs)
