@@ -1,6 +1,8 @@
 import collections
 import itertools
+
 import numpy as np
+import rigidbody
 
 
 """
@@ -21,6 +23,15 @@ Represents a set of cameras, 3D points, and feature tracks
 Bundle = collections.namedtuple('Bundle', ['cameras', 'points', 'tracks'])
 
 
+def factorize_pose_matrix(pose):
+    assert pose.shape == (3, 4)
+    qq, rr = np.linalg.qr(pose[:,:3].T)
+    k = rr.T
+    r = qq.T
+    p = -np.dot(r.T, np.linalg.solve(k, pose[:, 3]))
+    return k, r, p
+
+
 def load_vgg_cameras(basename):
     cameras = []
     for index in itertools.count():
@@ -29,8 +40,8 @@ def load_vgg_cameras(basename):
             pose = np.loadtxt(path)
         except IOError:
             return cameras
-        k, r, p = krp_from_pose(pose)
-        cameras.append(Camera(intrinsics=k, pose=triangulation.Pose(orientation=r, position=p)))
+        k, r, p = factorize_pose_matrix(pose)
+        cameras.append(Camera(intrinsics=k, pose=rigidbody.SE3(r, p)))
 
 
 def load_vgg_points(basename):
@@ -91,8 +102,8 @@ def load_matlab_dataset(basename):
 
     cameras = []
     for pose in poses:
-        k, r, p = krp_from_pose(pose)
-        cameras.append(Camera(intrinsics=k, pose=triangulation.Pose(orientation=r, position=p)))
+        k, r, p = factorize_pose_matrix(pose)
+        cameras.append(Camera(intrinsics=k, pose=rigidbody.SE3(r, p)))
 
     tracks = []
     for i, row in enumerate(features):

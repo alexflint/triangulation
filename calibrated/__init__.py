@@ -1,5 +1,5 @@
 from .triangulate import \
-	algorithms. \
+	algorithms, \
 	triangulate, \
 	triangulate_midpoint, \
 	triangulate_linear, \
