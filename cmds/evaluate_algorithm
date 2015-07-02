@@ -1,0 +1,105 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import argparse
+
+import numpy as np
+import rigidbody
+from rigidbody import rotation
+
+import triangulation
+import triangulation.calibrated
+
+import matplotlib.pyplot as plt
+import seaborn
+
+
+def generate_bundle(points, positions, axisangles, noise):
+    cameras = [triangulation.Camera(intrinsics=np.eye(3), pose=rigidbody.SE3(rotation.exp(w), p))
+        for w, p in zip(axisangles, positions)]
+    tracks = []
+    for i, point in enumerate(points):
+        track = []
+        for j, camera in enumerate(cameras):
+            f = rigidbody.pr(camera.pose.transform(point)) + np.random.randn(2)*noise
+            track.append(triangulation.Observation(point_index=i, frame_index=j, feature=f))
+        tracks.append(track)
+    return triangulation.Bundle(cameras=cameras, points=points, tracks=tracks)
+
+
+def simulate_near(num_points, num_frames, noise):
+    points = np.random.randn(num_points, 3) + [0., 0., 10.]
+    positions = np.random.randn(num_frames, 3)
+    axisangles = np.random.randn(num_frames, 3) * .1
+    return generate_bundle(points, positions, axisangles, noise)
+
+
+def simulate_far(num_points, num_frames, noise):
+    points = np.random.randn(num_points, 3) + [0., 0., 1000.]
+    positions = np.random.randn(num_frames, 3)
+    axisangles = np.random.randn(num_frames, 3) * .1
+    return generate_bundle(points, positions, axisangles, noise)
+
+
+def simulate_depth_difference(num_points, num_frames, noise):
+    points = np.random.randn(num_points, 3) + [0., 0., 10.]
+    positions = np.random.randn(num_frames, 3)
+    positions[:, 2] = np.random.uniform(0., -1000., size=num_frames)
+    axisangles = np.random.randn(num_frames, 3) * .1
+    return generate_bundle(points, positions, axisangles, noise)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data', choices=['sim_near', 'sim_far', 'sim_depth_difference', 'vgg', 'matlab'], default='sim_near')
+    parser.add_argument('--path', type=str)
+    parser.add_argument('--num_points', type=int, default=1000)
+    parser.add_argument('--num_frames', type=int, default=10)
+    parser.add_argument('--noise', type=float, default=0.)
+    parser.add_argument('--algorithms', choices=triangulation.calibrated.algorithms.keys(), nargs='+')
+    parser.add_argument('--output', type=str, default='out.pdf')
+    parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument('-v', '--verbose', action='store_true', default=False)
+    parser.add_argument('-q', '--quiet', action='store_true', default=False)
+    args = parser.parse_args()
+
+    np.random.seed(args.seed)
+
+    if args.data == 'sim_near':
+        bundle = simulate_near(args.num_points, args.num_frames, args.noise)
+    elif args.data == 'sim_far':
+        bundle = simulate_far(args.num_points, args.num_frames, args.noise)
+    elif args.data == 'sim_depth_difference':
+        bundle = simulate_depth_difference(args.num_points, args.num_frames, args.noise)
+    elif args.data == 'vgg':
+        bundle = triangulation.load_vgg_dataset(args.path)
+    elif args.data == 'matlab':
+        bundle = triangulation.load_matlab_dataset(args.path)
+
+    reconstructions = []
+    for algorithm in args.algorithms:
+        reconstruction = []
+        for i, track in enumerate(bundle.tracks):
+            poses = []
+            features = []
+            for observation in track:
+                poses.append(bundle.cameras[observation.frame_index].pose)
+                features.append(observation.feature)
+
+            assert len(poses) >= 2
+            reconstruction.append(triangulation.calibrated.triangulate(features, poses, algorithm=algorithm))
+        reconstructions.append(np.array(reconstruction))
+
+    plt.clf()
+    for alg, reconstruction in zip(args.algorithms, reconstructions):
+        errors = np.sqrt(rigidbody.sumsq(reconstruction - bundle.points, axis=1))
+        precisions = np.log10(np.maximum(errors, 1e-20))
+        plt.hist(precisions, bins=30, normed=True, label=alg, alpha=.4)
+    plt.xlabel('Log10 reconstruction error')
+    plt.legend()
+    plt.savefig(args.output)
+
+
+if __name__ == '__main__':
+    main()

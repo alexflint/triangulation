@@ -133,7 +133,7 @@ def triangulate_infnorm_fixed(features, poses, max_error):
         return np.squeeze(solution['x'])
 
 
-def triangulate_infnorm(features, poses, begin_radius=.01, min_radius=0., max_radius=1., abstol=1e-12, reltol=1e-5):
+def triangulate_infnorm(features, poses, begin_radius=.01, min_radius=0., max_radius=1., abstol=1e-20, reltol=1e-20):
     """
     Triangulate a landmark by minimizing the maximum reprojection error in any view.
     """
