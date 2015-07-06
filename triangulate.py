@@ -107,7 +107,7 @@ def make_triangulation_problem(features, poses, max_error):
     """
     Construct a second order cone program for infinity-norm triangulation from the given features.
     """
-    from ..socp import ConeProblem
+    from .socp import ConeProblem
     problem = ConeProblem(np.array([0., 0., 1.]))
     for z, pose in zip(features, poses):
         r, p = pose.rp
@@ -124,7 +124,7 @@ def triangulate_infnorm_fixed(features, poses, max_error):
     Find a landmark that projects with no greater than MAX_ERROR reprojection error into
     any view if one exists, or return None if no such landmark exists.
     """
-    from ..socp import solve
+    from .socp import solve
     problem = make_triangulation_problem(features, poses, max_error)
     solution = solve(problem)
     if solution['x'] is None:
@@ -133,7 +133,7 @@ def triangulate_infnorm_fixed(features, poses, max_error):
         return np.squeeze(solution['x'])
 
 
-def triangulate_infnorm(features, poses, begin_radius=.01, min_radius=0., max_radius=1., abstol=1e-20, reltol=1e-20):
+def triangulate_infnorm(features, poses, begin_radius=.01, min_radius=0., max_radius=1., abstol=1e-12, reltol=1e-12):
     """
     Triangulate a landmark by minimizing the maximum reprojection error in any view.
     """
