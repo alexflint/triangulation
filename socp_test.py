@@ -1,5 +1,5 @@
 import numpy as np
-from rigidbody import assert_arrays_almost_equal
+from numericaltesting import assert_arrays_almost_equal
 
 from .socp import ConeConstraint, ConeProblem, solve
 

@@ -2,3 +2,4 @@ cvxopt>=1.1.7
 numpy>=1.9.2
 rigidbody>=0.1
 scipy>=0.15.1
+numericaltesting>=0.11

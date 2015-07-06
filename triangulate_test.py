@@ -2,8 +2,8 @@ import itertools
 
 import unittest
 import numpy as np
-
-from rigidbody import pr, rotation, SE3, assert_arrays_almost_equal
+from numericaltesting import assert_arrays_almost_equal
+from rigidbody import pr, rotation, SE3
 
 from .triangulate import *
 
