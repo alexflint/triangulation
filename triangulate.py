@@ -28,6 +28,23 @@ def triangulate_midpoint(features, poses):
     return np.linalg.solve(jtj, jtr)
 
 
+def solve_depth_midpoint(base_feature, base_pose, features, poses):
+    """
+    Solve for depth of a landmark in a priveleged view using the midpoint method.
+    """
+    assert len(features) > 0
+    assert len(features) == len(poses)
+    z0 = normalized(unpr(base_feature))
+    jtj, jtr = 0., 0.
+    for z, pose in zip(features, poses):
+        h = householder(unpr(z))
+        a = dots(h, pose.orientation, base_pose.orientation.T, z0)
+        b = dots(h, pose.orientation, pose.position - base_pose.position)
+        jtj += np.dot(a.T, a)
+        jtr += np.dot(a.T, b)
+    return jtr / jtj
+
+
 def triangulate_linear(features, poses):
     """
     Triangulate a landmark from two or more views using the midpoint method.

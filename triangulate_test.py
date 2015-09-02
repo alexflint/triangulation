@@ -30,12 +30,31 @@ def check_triangulation(f, num_frames, noise, decimals):
     assert_arrays_almost_equal(estimated, true_position, decimals)
 
 
+def check_depth_solver(f, num_frames, noise, decimals):
+    features, poses, true_position = generate_features(num_frames, noise)
+    base_feature = features[0]
+    aux_features = features[1:]
+    base_pose = poses[0]
+    aux_poses = poses[1:]
+    true_depth = np.linalg.norm(base_pose.transform(true_position))
+    estimated_depth = f(base_feature, base_pose, aux_features, aux_poses)
+    assert_arrays_almost_equal(estimated_depth, true_depth, decimals)
+
+
 def test_triangulate_midpoint():
     np.random.seed(0)
     for num_frames in [2, 3, 10]:
         for noise, decimals in [(0, 12), (1e-8, 6), (1e-3, 2)]:
             print('Testing %d frames with noise=%f' % (num_frames, noise))
             check_triangulation(triangulate_midpoint, num_frames, noise, decimals)
+
+
+def test_depth_midpoint():
+    np.random.seed(0)
+    for num_frames in [2, 3, 10]:
+        for noise, decimals in [(0, 12), (1e-8, 6), (1e-3, 2)]:
+            print('Testing %d frames with noise=%f' % (num_frames, noise))
+            check_depth_solver(solve_depth_midpoint, num_frames, noise, decimals)
 
 
 def test_triangulate_linear():
